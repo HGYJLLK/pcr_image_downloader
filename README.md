@@ -41,7 +41,7 @@ python main.py
 ```
 
 ## 数据来源与鸣谢
-- 角色数据来源：[碧蓝档案 Wiki](https://wiki.biligame.com/pcr/%E8%A7%92%E8%89%B2%E5%88%AB%E7%A7%B0)
+- 角色数据来源：[公主连结 Wiki](https://wiki.biligame.com/pcr/%E8%A7%92%E8%89%B2%E5%88%AB%E7%A7%B0)
 - 特别感谢公主连结Wiki的贡献者们，花舞攻略组提供的宝贵资料
 - 数据采集工具：八爪鱼采集器8
 
