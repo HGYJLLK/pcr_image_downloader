@@ -10,35 +10,6 @@
 - （后续开发中）基于OpenCV的角色识别功能
 - 内部写了详细的注释，可以修改参考使用
 
-## 技术栈
-- Python 3.x
-- pandas
-- openpyxl
-- requests
-- logging
-
-## 项目结构
-```
-pcr_image_downloader/
-│
-├── .venv/                 # Python虚拟环境
-├── image/                 # 下载的图片存储位置
-├── main.py               # 主程序
-├── characters.xlsx       # 角色数据文件
-├── character_info.txt    # 生成的角色信息映射
-└── download.log          # 下载日志
-```
-
-## 使用方法
-1. 创建并激活虚拟环境
-2. 安装依赖：
-```bash
-pip install pandas openpyxl requests
-```
-3. 运行程序：
-```bash
-python main.py
-```
 
 ## 数据来源与鸣谢
 - 角色数据来源：[公主连结 Wiki](https://wiki.biligame.com/pcr/%E8%A7%92%E8%89%B2%E5%88%AB%E7%A7%B0)
