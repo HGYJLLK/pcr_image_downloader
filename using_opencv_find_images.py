@@ -42,11 +42,17 @@ class CharacterGridDetector:
         self.min_area = 3000
         self.max_area = 60000
         self.aspect_ratio_range = (0.6, 1.4)
-        self.similarity_threshold = 0.3  # 降低相似度阈值以增加匹配成功率
+        self.similarity_threshold = 0.3
+
+    def _normalize_path(self, path: Union[str, Path]) -> Path:
+        """
+        标准化路径，确保使用正确的路径分隔符
+        """
+        return Path(str(path).replace('\\', os.sep)).resolve()
 
     def _ensure_path(self, path: Union[str, Path]) -> Path:
         """确保路径存在且格式正确"""
-        path = Path(path)
+        path = self._normalize_path(path)
         if not path.exists():
             raise FileNotFoundError(f"文件不存在: {path}")
         return path
@@ -54,7 +60,11 @@ class CharacterGridDetector:
     def _load_image(self, image_path: Union[str, Path]) -> np.ndarray:
         """安全地加载图片"""
         try:
-            path = self._ensure_path(image_path)
+            path = self._normalize_path(image_path)
+            if not path.exists():
+                raise FileNotFoundError(f"文件不存在: {path}")
+
+            # 使用 cv2.imread 读取图片，处理中文路径
             img = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
             if img is None:
                 raise ValueError(f"无法解码图片: {path}")
@@ -66,7 +76,10 @@ class CharacterGridDetector:
     def _save_image(self, image: np.ndarray, save_path: Union[str, Path]) -> bool:
         """安全地保存图片"""
         try:
-            save_path = Path(save_path)
+            save_path = self._normalize_path(save_path)
+            # 确保保存路径的父目录存在
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+
             is_success = cv2.imencode(save_path.suffix, image)[1].tofile(str(save_path))
             if is_success:
                 logger.info(f"已保存图片到: {save_path}")
@@ -190,7 +203,7 @@ class CharacterGridDetector:
         return boxes[pick].tolist()
 
     def detect_character_boxes(self, image_path: Union[str, Path],
-                               output_path: Optional[Union[str, Path]] = None) -> Tuple[List, Optional[np.ndarray]]:
+                               output_path: Optional[Union[str, Path]] = None) -> Tuple[List, np.ndarray, List]:
         """检测角色框位置"""
         try:
             # 加载图片
@@ -217,7 +230,9 @@ class CharacterGridDetector:
             mask = cv2.dilate(mask, self.morph_kernel, iterations=1)
 
             # 保存掩码图像用于调试
-            self._save_image(mask, "mask_debug.png")
+            if output_path:
+                mask_debug_path = Path(output_path).parent / "mask_debug.png"
+                self._save_image(mask, mask_debug_path)
 
             # 查找轮廓
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -269,13 +284,15 @@ class CharacterGridDetector:
 
             # 保存结果图像
             if output_path:
+                output_path = self._normalize_path(output_path)
                 self._save_image(display_img, output_path)
                 logger.info(f"已保存检测结果到: {output_path}")
 
-            # 保存识别结果到JSON
-            with open('recognition_results.json', 'w', encoding='utf-8') as f:
-                json.dump(identified_results, f, ensure_ascii=False, indent=2)
-                logger.info("识别结果已保存到 recognition_results.json")
+                # 保存识别结果到JSON
+                json_path = output_path.parent / 'recognition_results.json'
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(identified_results, f, ensure_ascii=False, indent=2)
+                logger.info(f"识别结果已保存到 {json_path}")
 
             return character_boxes, display_img, identified_results
 
@@ -287,8 +304,10 @@ class CharacterGridDetector:
 def main():
     """主函数"""
     try:
-        # 加载角色数据
-        character_data_path = Path('character_db.json')
+        # 使用 Path 对象处理路径
+        base_dir = Path(__file__).parent
+        character_data_path = base_dir / 'character_db.json'
+
         if not character_data_path.exists():
             logger.error("找不到角色数据库文件")
             return
@@ -296,11 +315,16 @@ def main():
         with open(character_data_path, 'r', encoding='utf-8') as f:
             character_data = json.load(f)
 
+            # 标准化角色数据中的图片路径
+            for char_id, char_info in character_data.items():
+                if 'image_path' in char_info:
+                    char_info['image_path'] = str(base_dir / char_info['image_path'])
+
         logger.info(f"成功加载角色数据库，包含 {len(character_data)} 个角色")
 
         # 设置输入输出路径
-        input_path = Path("screenshot.png")
-        output_path = Path("detected_boxes.png")
+        input_path = base_dir / "screenshot.png"
+        output_path = base_dir / "detected_boxes.png"
 
         # 创建检测器并处理
         detector = CharacterGridDetector(character_data)
